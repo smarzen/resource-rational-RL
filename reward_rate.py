@@ -211,6 +211,8 @@ def maximiner(r,pogw,pwgaw):
 # ax.set_zlabel("Reward")
 # plt.show()
 
-r, Ra, Rs = getFeatures(r,pogw,pwgaw,1,0.01,0.01,10,0.01)
+r1, Ra, Rs = getFeatures(r,pogw,pwgaw,1,0.01,0.01,10,0.01)
+print(r1, Ra, Rs)
 rmm, Ramm, Rsmm = maximiner(r,pogw,pwgaw)
+print(rmm, Ramm, Rsmm)
 
