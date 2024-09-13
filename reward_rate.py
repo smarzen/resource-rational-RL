@@ -1,7 +1,4 @@
 import numpy as np
-import scipy as sp
-import numpy.linalg as LA
-import matplotlib.pyplot as plt
 
 # create environment
 aO = 1; aW = 1
@@ -16,11 +13,18 @@ pogw = np.random.dirichlet(alpha=aO*np.ones(O),size=W)
 # draw the transition probabilities from a Dirichlet distribution
 pwgaw = np.random.dirichlet(alpha=aW*np.ones(W),size=(M,W))
 
+def stat_prob_dist(T):
+	w, v = np.linalg.eig(T)
+	mask = np.abs(w-1)<1e-5
+	pg = v[:,mask]
+	pg = np.real(pg)
+	return pg/np.sum(pg)
+
 def getFeatures(r,pogw,pwgaw,N,beta,lambd,L,eps):
 	W, M = r.shape
 	foo, O = pogw.shape
 	# initialize arrays
-	k = 3
+	k = 3 # arbitrary
 	psgsigma_used = np.random.dirichlet(alpha=np.ones(k),size=N) # arbitrary initial # of causal states
 	# initialize psigma and pwgsigma
 	psigma_used = np.random.dirichlet(alpha=np.ones(N))
@@ -29,7 +33,7 @@ def getFeatures(r,pogw,pwgaw,N,beta,lambd,L,eps):
 	psigma = {}
 	pwgsigma = {}
 	for i in range(N):
-		ind = np.asarray([i,i,i]).astype(int)
+		ind = np.asarray([i for j in range(k)]).astype(int)
 		psgsigma[str(ind)] = psgsigma_used[i,:] # just to start us off
 		psigma[str(ind)] = psigma_used[i]
 		pwgsigma[str(ind)] = pwgsigma_used[i,:]
@@ -50,11 +54,7 @@ def getFeatures(r,pogw,pwgaw,N,beta,lambd,L,eps):
 		T = np.zeros([W,W])
 		for o in range(O):
 			T = T+Ts[str(o)]
-		w, v = np.linalg.eig(T.T)
-		mask = np.abs(w-1)<1e-5
-		foo = v[:,mask]
-		mu = np.real(foo)/np.sum(np.real(foo))
-		mu = mu
+		mu = stat_prob_dist(T.T)
 		# then get p(w|sigma) from Paul's iteration
 		# run over all observation sequences of length L
 		obs_sequences = {}
@@ -163,11 +163,7 @@ def maximiner(r,pogw,pwgaw):
 		T = np.zeros([W,W])
 		for j in range(W):
 			T[:,j] = pwgaw[int(foo[j]),j,:]
-		w, v = np.linalg.eig(T)
-		mask = np.abs(w-1)<1e-5
-		pg = v[:,mask]
-		pg = np.real(pg)
-		pg = pg/np.sum(pg)
+		pg = stat_prob_dist(T)
 		rates_new = -np.nansum(pg*np.log2(pg))
 		# coarse grain to get the ratea
 		pa = {}
@@ -182,7 +178,7 @@ def maximiner(r,pogw,pwgaw):
 		rs = np.zeros(W)
 		for j in range(W):
 			rs[j] = r[j,foo[j]]
-		reward_new = np.sum(pg*rs)
+		reward_new = np.sum(pg[:,0]*rs)
 		# then replace if better
 		if reward_new>reward:
 			reward = reward_new
@@ -190,29 +186,7 @@ def maximiner(r,pogw,pwgaw):
 			rates = rates_new
 	return reward, ratea, rates
 
-# visualize the surface
-# sweep over all beta and lambd
-# rewards = []
-# rates_a = []
-# rates_s = []
-# for beta in np.linspace(0.01,1,1000):
-# 	for lambd in np.linspace(0.01,1,1000):
-# 		a, b, c = getFeatures(r,psigma,pwgsigma,beta,lambd)
-# 		rewards.append(a)
-# 		rates_a.append(b)
-# 		rates_s.append(c)
-# 		np.savez('Reward-rate_function_20000iterations.npz',aS=aS,aW=aW,M=M,N=N,W=W,r=r,psigma=psigma,pwgsigma=pwgsigma,
-# 			rewards=rewards,rates_a=rates_a,rates_s=rates_s)
-
-# ax = plt.figure().add_subplot(projection='3d')
-# ax.scatter(rates_s, rates_a, rewards, marker='o')
-# ax.set_xlabel("Sensory rate")
-# ax.set_ylabel("Actuator rate")
-# ax.set_zlabel("Reward")
-# plt.show()
-
 r1, Ra, Rs = getFeatures(r,pogw,pwgaw,1,0.01,0.01,10,0.01)
 print(r1, Ra, Rs)
 rmm, Ramm, Rsmm = maximiner(r,pogw,pwgaw)
 print(rmm, Ramm, Rsmm)
-
